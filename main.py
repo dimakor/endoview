@@ -105,7 +105,7 @@ def loadfull(path):
     files = glob.glob(fullpath)
     total = len(files)
     for i, f in enumerate(files):
-        with open(f) as p:
+        with open(f, encoding='utf-8') as p:
             w = json.load(p)
             workout_dict = {}
             for dict in w:
@@ -124,7 +124,8 @@ def loadfull(path):
     return dd, indx
 
 def updatetable(data, dd, window):
-    data.clear()
+    #data.clear()
+    data = []
     for dict in dd:
         dict.setdefault('message', '')
         dict.setdefault('num_comments', '')
@@ -217,6 +218,7 @@ while True:  # Event Loop
             config['endoview'] = {}
             config['endoview']['Cache'] = 'Y' #indicate that we have cached data
             config['endoview']['BackupFolder'] = folder_path #save location of Endomondo backup
+            print("CWD:", os.getcwd())
             with open('endoview.ini', 'w') as configfile:
                 config.write(configfile)
             #now store cache to file system
@@ -310,17 +312,17 @@ while True:  # Event Loop
         comm_num = workout.get('num_comments')
         if comm_num !='':
             try:
-                for i in range(comm_num):
+                for i in range(comm_num): #TODO: make range depending on real length of list
                     #frame_layout = pprint.pformat(emoji.get_emoji_regexp().sub(r'', workout.get('ecomments').get('data')[i]))
                     comment = workout.get('ecomments').get('data')[i]
-                    comh = int(len(comment['text'])/150)+1 #height of the comment cell to fit the comment
+                    comh = int(len(comment['text'])/100)+1 #height of the comment cell to fit the comment
                     frame_layout = [[sg.Text(emoji.get_emoji_regexp().sub(r'',comment['from']['name'])+':', size=(20, comh)), 
-                                    sg.Text(emoji.get_emoji_regexp().sub(r'',comment['text']), size=(150, comh), pad=(0,0))]]
+                                    sg.Text(emoji.get_emoji_regexp().sub(r'',comment['text']), size=(100, comh), pad=(0,0))]]
                     windetails += frame_layout
-                    win2_y += 25
+                    win2_y += 28 #TODO: add height depending on comment height
             except Exception as err:
                 print('Exception:', err)
-                windetails += [[sg.Multiline(emoji.get_emoji_regexp().sub(r'', pprint.pformat(workout)), size=(150, 10))]]
+                #windetails += [[sg.Multiline(emoji.get_emoji_regexp().sub(r'', pprint.pformat(workout)), size=(150, 10))]]
 
         win2_y = win2_y_max if win2_y > win2_y_max else win2_y
 
