@@ -1,15 +1,18 @@
-import PySimpleGUI as sg
 import glob
 import json
-import os.path, io
-import time, pytz, datetime
+import os.path
+import io
+import time
+import pytz
+import datetime
 import emoji
 import pickle
 import configparser
-from PIL import Image, ImageTk
-from fetchcomments import *
 
-import pprint
+from PIL import Image, ImageTk
+import PySimpleGUI as sg
+
+from fetchcomments import *
 
 #interface declarations
 sg.theme("SystemDefault")
@@ -28,22 +31,29 @@ def get_img_data(f, maxsize=(500, 200), first=False):
     return ImageTk.PhotoImage(img)
 
 def FieldColumn(name, key, value=''):
+    """Generate a column that contains two text fields - label and value
+    """
     layout = [
             [sg.Text(name, size=(10,1)), sg.Text(value if value is not None else '', size=(18,1), key=key)]
             ]
     return sg.Col(layout, pad=(0,0))
 
+#Layout of lower frame of main window 
 details_frame = [
                     [FieldColumn("Sport: ", '-SPORT-'), FieldColumn("Date: ",'-DATE-'),
                     FieldColumn("Time: ", '-STARTTIME-'), FieldColumn("Duration: ", '-DURATION-'),
                     FieldColumn("Distance: ", '-DISTANCE-')],
-                    [FieldColumn("Pace: ", '-PACE-'), FieldColumn("Ascend: ", '-ASC-'), FieldColumn("Descent: ", '-DESC-')],
+                    [FieldColumn("Pace: ", '-PACE-'), FieldColumn("Ascend: ", '-ASC-'), 
+                    FieldColumn("Descent: ", '-DESC-')],
                     [sg.Frame('Note', [[sg.Text(key='-NOTE-', size=(180,6))]])]
                 ]
 
+#List of labels for main table
 tabl_head = ['Date', 'Time', 'Type', 'Distance', 'Duration', 'Pace', 'Photos', 'Note', 'Comments']
+#Fill data for main table (needed as placeholder to define size for initial layout)
 data = [[' '*15,' '*15,' '*15,' '*10,' '*10,' '*10,' '*10,' '*45,' '*10] for row in range(16)]
 
+#Main window layout
 layout = [
     [sg.FolderBrowse(target='-FOLDER-'), sg.Input(key='-FOLDER-', enable_events=True), 
     sg.Submit(), sg.Button('Fetch Comments', key='-FETCH-'), sg.Exit()],
@@ -59,6 +69,8 @@ def _to_python_time(endomondo_time):
     return datetime.datetime.strptime(endomondo_time, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=pytz.utc)
 
 def normalizefield(dict):
+    """Normalize dictionary of raw Endomondo data
+    """
     normalized={}
     if 'speed_avg_kmh' in dict.keys():
         speed = float(dict['speed_avg_kmh'])
@@ -98,39 +110,46 @@ def normalizefield(dict):
     return dict
 
 def loadfull(path):
+    """Load data from Endomondo backup
+    """
     dd=[]
     #create index to find workout by start_time (actually, date and time string)
     indx = {}
-    fullpath = path+workout_path+'*.json'
-    files = glob.glob(fullpath)
-    total = len(files)
+    fullpath = path+workout_path+'*.json' #TODO: join paths correctly
+    files = glob.glob(fullpath) #Load list of all JSON workout files
+    total = len(files) #needed for progress bar
     for i, f in enumerate(files):
         with open(f, encoding='utf-8') as p:
             w = json.load(p)
             workout_dict = {}
             for dict in w:
+                #skip GPS track part for workout
                 if 'points' in dict.keys():
                     continue
                 workout_dict.update(normalizefield(dict))
-            workout_dict.update({'json_file': f})
+            workout_dict.update({'json_file': f}) #add path of processed file for future references
             dd.append(workout_dict)
         if not sg.OneLineProgressMeter('Loading Endo Backup', i, total-1,  'kkk', path):
             break
     #sort before creating an index
     dd.sort(key=lambda a: a['date'])
+    #create index to find specific workout using start time of workout
+    #will need it when we will download comments from Endomondo
     for i, d in enumerate(dd):
-        indx[d['start_time'][:-2]] = i
+        indx[d['start_time'][:-2]] = i #-2 to remove milliseconds from start time
         sg.OneLineProgressMeter('Creating index', i, len(dd)-1)
     return dd, indx
 
 def updatetable(data, dd, window):
+    """Update data table of the main window with data from dd
+    """
     #data.clear()
     data = []
     for dict in dd:
-        dict.setdefault('message', '')
+        dict.setdefault('message', '') #avoid None in empty messages
         dict.setdefault('num_comments', '')
         piclist = dict.get('pictures')
-        numpic = ' ' if piclist is None else len(piclist)
+        numpic = ' ' if piclist is None else len(piclist) #find out number of pictures in the workout
         data.append([dict.get('date'), dict.get('time'), dict.get('sport'),
             dict.get('distance'), dict.get('duration'), dict.get('pace'),
             numpic, dict.get('message'), dict.get('num_comments')])
@@ -141,7 +160,6 @@ def updatecomments(dd, comm, indx):
     maxw = len(comm)
     for i, c in enumerate(comm):
         lcpc = c.get('num_comments')
-        # pprint.pprint(c.get('comments'))
         #TODO: notify if amount of workouts in databases are not the same
         if lcpc:
             #check if there are comments in workout
@@ -177,7 +195,7 @@ try:
 except:
     pass
 
-while True:  # Event Loop
+while True:  # Event Loop of main window
     event, values = window.read(timeout=100) #timeout for debugger
     if event == sg.TIMEOUT_KEY:
         continue
@@ -202,30 +220,29 @@ while True:  # Event Loop
     elif event == '-FOLDER-' or (event == 'Submit' and len(values['-FOLDER-'])>0):
         folder_path = values['-FOLDER-']
         #test if endoworkouts.json file is present
-        if os.path.isfile(folder_path+'/endoworkouts.json'):
-            with open(folder_path+'/endoworkouts.json') as p:
-                dd = json.load(p)
-            print('Loading endoworkouts.json')
-            distance_key='distance_km'
-            duration_key='duration'
-            speed_avg_key='speed_avg'
-        else:
-            dd, indx = loadfull(folder_path)
-            max_workouts = len(dd)
-            print('Loading backup! ')
-            # we have processed database in memory - let's write cache and create config file
-            config = configparser.ConfigParser()
-            config['endoview'] = {}
-            config['endoview']['Cache'] = 'Y' #indicate that we have cached data
-            config['endoview']['BackupFolder'] = folder_path #save location of Endomondo backup
-            print("CWD:", os.getcwd())
-            with open('endoview.ini', 'w') as configfile:
-                config.write(configfile)
-            #now store cache to file system
-            with open("cache.pkl", "wb") as write_file:
-                pickle.dump(dd, write_file, pickle.HIGHEST_PROTOCOL)
-            with open("index.pkl", "wb") as write_file:
-                pickle.dump(indx, write_file, pickle.HIGHEST_PROTOCOL)
+        # if os.path.isfile(folder_path+'/endoworkouts.json'):
+        #     with open(folder_path+'/endoworkouts.json') as p:
+        #         dd = json.load(p)
+        #     print('Loading endoworkouts.json')
+        #     distance_key='distance_km'
+        #     duration_key='duration'
+        #     speed_avg_key='speed_avg'
+        # else:
+        dd, indx = loadfull(folder_path)
+        max_workouts = len(dd)
+        print('Loading backup! ')
+        # we have processed database in memory - let's write cache and create config file
+        config = configparser.ConfigParser()
+        config['endoview'] = {}
+        config['endoview']['Cache'] = 'Y' #indicate that we have cached data
+        config['endoview']['BackupFolder'] = folder_path #save location of Endomondo backup
+        with open('endoview.ini', 'w') as configfile:
+            config.write(configfile)
+        #now store cache to file system
+        with open("cache.pkl", "wb") as write_file:
+            pickle.dump(dd, write_file, pickle.HIGHEST_PROTOCOL)
+        with open("index.pkl", "wb") as write_file:
+            pickle.dump(indx, write_file, pickle.HIGHEST_PROTOCOL)
         updatetable(data, dd, window)
     elif event == '-DATA-':
         workout = dd[values['-DATA-'][0]]
@@ -239,13 +256,13 @@ while True:  # Event Loop
         window['-DESC-'].update(workout.get('descend_m'))
         window['-NOTE-'].update(workout.get('message'))
     elif event == '-DATA-+DBL+' or event == '-DATA-+ENTER+':
-        #in case of double click or ENTER press on specific line - pop up detailed windows
+        #in case of double click or ENTER press on specific line - pop up detailed window
         workout = dd[values['-DATA-'][0]] # selected workout
         #prepare layout for detailed window
         #define sizes of the details window TODO: bind to desktop size
-        win2_x = 1100
-        win2_y = 100
-        win2_y_max = 700
+        win2_width = 1100
+        win2_height = 100
+        WIN2_HEIGHT_MAX = 700
 
         windetails = [
                         [
@@ -282,8 +299,8 @@ while True:  # Event Loop
             nheight = int(lennote/150)+1
             if nlines < nheight:
                 nlines = nheight
-            windetails += [[sg.Frame('Note', [[sg.Text(msg, key='-NOTE-', size=(int(win2_x/8), nlines))]])]]
-            win2_y += nlines*8+50 #extend height of the window
+            windetails += [[sg.Frame('Note', [[sg.Text(msg, key='-NOTE-', size=(int(win2_width/8), nlines))]])]]
+            win2_height += nlines*8+50 #extend height of the window
 
         #check if there are pictures posted to the workout and add layout to the window
         pict = workout.get('pictures')
@@ -294,16 +311,16 @@ while True:  # Event Loop
               #  try:
                     url = pict[i][1].get('picture')[0][0].get('url')
                     data, (imgwidth, imgheight) = get_img_data(folder_path+'/'+url, first=True)
-                    if linewidth + imgwidth > win2_x:
+                    if linewidth + imgwidth > win2_width:
                         windetails += [imgline]
-                        win2_y += imgheight+50
+                        win2_height += imgheight+50
                         imgline = []
                         linewidth = 0
                     imgline.append(sg.Image(key='-IMAGE'+str(i)+'-', data=data))
                     linewidth += imgwidth
             if imgline !=[]:
                 windetails += [imgline]
-                win2_y += imgheight+50
+                win2_height += imgheight+50
                # except Exception as err:
                #     print("Images exception: ", err)
                #     break
@@ -319,14 +336,14 @@ while True:  # Event Loop
                     frame_layout = [[sg.Text(emoji.get_emoji_regexp().sub(r'',comment['from']['name'])+':', size=(20, comh)), 
                                     sg.Text(emoji.get_emoji_regexp().sub(r'',comment['text']), size=(100, comh), pad=(0,0))]]
                     windetails += frame_layout
-                    win2_y += 28 #TODO: add height depending on comment height
+                    win2_height += 28 #TODO: add height depending on comment height
             except Exception as err:
                 print('Exception:', err)
                 #windetails += [[sg.Multiline(emoji.get_emoji_regexp().sub(r'', pprint.pformat(workout)), size=(150, 10))]]
 
-        win2_y = win2_y_max if win2_y > win2_y_max else win2_y
+        win2_height = WIN2_HEIGHT_MAX if win2_height > WIN2_HEIGHT_MAX else win2_height
 
-        win2layout = [[sg.Column(windetails, scrollable=True, vertical_scroll_only=True, size=(win2_x, win2_y))]]
+        win2layout = [[sg.Column(windetails, scrollable=True, vertical_scroll_only=True, size=(win2_width, win2_height))]]
         win2 = sg.Window('Workout detail', win2layout, finalize=True, modal=True)
         win2.bind('<Escape>', '+ESC+')
         win2.bind('<Return>', '+ENTER+')
