@@ -5,5 +5,6 @@ Special thanks to:
 1. The PySimpleGUI Organization for fantastic GUI package
 2. Python Endomondo API author (https://github.com/yannickcarer/endomondo-export)
 
-Limitations:
-1. Remove all emojis from notes and comments due to tkinter bug
+Known Issues:
+1. Endoview will remove all emojis from notes and comments due to tkinter bug
+2. Windows Defender could limit writing permissions for Endoview so it should be whitelisted. Press corresponding notification and allow writing
