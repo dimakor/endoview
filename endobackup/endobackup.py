@@ -138,7 +138,7 @@ def get_workout_pics(id, token):
     workout_params = {'workoutId': id, 'fields': 'pictures'}
     workout_params.update({'authToken': token,
                        'language': 'EN'})
-    rr = request.get('http://api.mobile.endomondo.com/mobile/api/workout/get', params=workout_params)
+    rr = request.get('https://api.mobile.endomondo.com/mobile/api/workout/get', params=workout_params)
     if rr.status_code != 200:
         print ('Error!' + str(rr.status_code))
     return(rr.json().get('pictures'))
@@ -148,7 +148,7 @@ def create_tcx(ch, token, request):
     workout_params = {'trackId': str(ch.get('id'))}
     workout_params.update({'authToken': token,
             'language': 'EN'})
-    rr = request.get('http://api.mobile.endomondo.com/mobile/readTrack', params=workout_params)
+    rr = request.get('https://api.mobile.endomondo.com/mobile/readTrack', params=workout_params)
     if rr.status_code != 200:
         print ('Points Error!', str(rr.status_code))
     lines = rr.text.split("\n")
@@ -204,7 +204,7 @@ def main():
 
     request = requests.session()
     request.headers['User-Agent'] = user_agent
-    r = request.get('http://api.mobile.endomondo.com/mobile/auth', params=params)
+    r = request.get('https://api.mobile.endomondo.com/mobile/auth', params=params)
     if r.status_code != 200:
         print ('Error!', r.status_code)
 
@@ -237,7 +237,7 @@ def main():
             print ("Creation of the directory %s failed" % x)
 
     before = None #_to_python_time('2020-09-30 00:07:38 UTC') #None
-    after = None# _to_python_time('2020-09-01 00:07:38 UTC') #None
+    after = _to_python_time('2020-11-01 00:07:38 UTC') #None
     results = [] # type: ignore
 
     workout_params = {'maxResults': max_results,
@@ -255,7 +255,7 @@ def main():
         if before is not None:
             workout_params.update({'before': _to_endomondo_time(before)})
 
-        r = request.get('http://api.mobile.endomondo.com/mobile/api/workout/list', 
+        r = request.get('https://api.mobile.endomondo.com/mobile/api/workout/list', 
                         params=workout_params)
         if r.status_code != 200:
             print ('Error!', r.status_code)
@@ -283,7 +283,7 @@ def main():
                     workout_params = {'feedId': str(feedid)}
                     workout_params.update({'authToken': token,
                             'language': 'EN'})
-                    rr = request.get('http://api.mobile.endomondo.com/mobile/api/feed/comments/get', params=workout_params)
+                    rr = request.get('https://api.mobile.endomondo.com/mobile/api/feed/comments/get', params=workout_params)
                     if rr.status_code != 200:
                         print ('Error!' + str(rr.status_code))
                     jj = rr.json()
