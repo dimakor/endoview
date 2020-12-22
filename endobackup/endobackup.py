@@ -237,7 +237,7 @@ def main():
             print ("Creation of the directory %s failed" % x)
 
     before = None #_to_python_time('2020-09-30 00:07:38 UTC') #None
-    after = None #_to_python_time('2020-11-01 00:07:38 UTC') #None
+    after = _to_python_time('2020-12-01 00:07:38 UTC') #None
     results = [] # type: ignore
 
     workout_params = {'maxResults': max_results,
@@ -368,7 +368,7 @@ def main():
                 print(KeyError)
 
         if chunk:
-            #results.extend(chunk)
+            results.extend(chunk)
             last_start_time = chunk[-1]['start_time']
             before = _to_python_time(last_start_time)
 
@@ -378,8 +378,9 @@ def main():
             break
     
     bar.finish()
-    # with open('endoworkouts.json', 'w') as json_file:
-    #     json.dump(results, json_file)
+    print("Folder:", backupfolder)
+    with open(os.path.join(backupfolder,'endoworkouts.json'), 'w') as json_file:
+        json.dump(results, json_file)
     print("Workout processed: ", nm)
     # feed_id = results['data'][0]['feed_id']
     # print('FEED ID:'+str(feed_id))
