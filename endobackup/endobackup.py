@@ -237,7 +237,7 @@ def main():
             print ("Creation of the directory %s failed" % x)
 
     before = None #_to_python_time('2020-09-30 00:07:38 UTC') #None
-    after = _to_python_time('2020-11-01 00:07:38 UTC') #None
+    after = None #_to_python_time('2020-11-01 00:07:38 UTC') #None
     results = [] # type: ignore
 
     workout_params = {'maxResults': max_results,
@@ -291,10 +291,11 @@ def main():
                     ch['comments'] = comments
                     ch['num_comments'] = num_comments
                 
-                workoutfname = os.path.join(workoutfolder, ch['start_time']+'.json')
-                trackfname = os.path.join(trackfolder, ch['start_time']+'_track.tcx')
-                trackfname_txt = os.path.join(trackfolder, ch['start_time']+'_track.txt')
-                trackfname_json = os.path.join(trackfolder, ch['start_time']+'_track.json')
+                workout_name = ch['start_time'].replace(':', '_')
+                workoutfname = os.path.join(workoutfolder, workout_name+'.json')
+                trackfname = os.path.join(trackfolder, workout_name+'_track.tcx')
+                trackfname_txt = os.path.join(trackfolder, workout_name+'_track.txt')
+                trackfname_json = os.path.join(trackfolder, workout_name+'_track.json')
 
                 #save points to separate file
                 try:
@@ -311,7 +312,6 @@ def main():
                 if activity is not None:
                     writer = tcx.Writer()
                     tcxfile = writer.write(activity)
-                    #pprint.pprint(tcxfile)
                     if tcxfile:
                         with open(trackfname, 'wb') as f:
                             f.write(tcxfile)
