@@ -9,6 +9,8 @@ import emoji
 import pickle
 import configparser
 
+import pprint
+
 from PIL import Image, ImageTk
 import PySimpleGUI as sg
 
@@ -20,6 +22,59 @@ sg.theme("SystemDefault")
 #logic declarations
 workout_path = '/Workouts/'
 
+SPORTS = {
+    0:  'Running',
+    1:  'Cycling, transport',
+    2:  'Cycling, sport',
+    3:  'Mountain biking',
+    4:  'Skating',
+    5:  'Roller skiing',
+    6:  'Skiing, cross country',
+    7:  'Skiing, downhill',
+    8:  'Snowboarding',
+    9:  'Kayaking',
+    10: 'Kite surfing',
+    11: 'Rowing',
+    12: 'Sailing',
+    13: 'Windsurfing',
+    14: 'Fitness walking',
+    15: 'Golfing',
+    16: 'Hiking',
+    17: 'Orienteering',
+    18: 'Walking',
+    19: 'Riding',
+    20: 'Swimming',
+    21: 'Spinning',
+    22: 'Other',
+    23: 'Aerobics',
+    24: 'Badminton',
+    25: 'Baseball',
+    26: 'Basketball',
+    27: 'Boxing',
+    28: 'Climbing stairs',
+    29: 'Cricket',
+    30: 'Cross training',
+    31: 'Dancing',
+    32: 'Fencing',
+    33: 'Football, American',
+    34: 'Football, rugby',
+    35: 'Football, soccer',
+    36: 'Handball',
+    37: 'Hockey',
+    38: 'Pilates',
+    39: 'Polo',
+    40: 'Scuba diving',
+    41: 'Squash',
+    42: 'Table tennis',
+    43: 'Tennis',
+    44: 'Volleyball, beach',
+    45: 'Volleyball, indoor',
+    46: 'Weight training',
+    47: 'Yoga',
+    48: 'Martial arts',
+    49: 'Gymnastics',
+    50: 'Step counter'
+}
 
 def get_img_data(f, maxsize=(500, 200), first=False):
     """Generate image data using PIL
@@ -45,48 +100,91 @@ def FieldColumn(name, key, value=''):
 
 
 def _to_python_time(endomondo_time):
-    return datetime.datetime.strptime(endomondo_time, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=pytz.utc)
+    try:
+        pt = datetime.datetime.strptime(endomondo_time, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=pytz.utc)
+    except ValueError:
+        pt = datetime.datetime.strptime(endomondo_time, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=pytz.utc)
+    return pt
 
-def normalizefield(dict):
+def normalizefield(wodict):
     """Normalize dictionary of raw Endomondo data
     """
-    normalized={}
-    if 'speed_avg_kmh' in dict.keys():
-        speed = float(dict['speed_avg_kmh'])
+    if 'speed_avg' in wodict.keys():
+        speed = float(wodict['speed_avg'])
         if speed != 0 :
             pace_sec = 60*60 / speed
             res = time.gmtime(pace_sec)
-            normalized['pace'] = time.strftime('%M:%S', res)
-            normalized['speed'] = str(round(speed, 2))
+            wodict['pace'] = time.strftime('%M:%S', res)
+            wodict['speed'] = str(round(speed, 2))
         else:
-            normalized['pace'] = '0'
-            normalized['speed'] = '0'
-        return normalized
-    elif 'speed_max_kmh' in dict.keys():
-        speed = float(dict['speed_max_kmh'])
-        normalized['speed_max'] = str(round(speed, 2))
-        return normalized
-    elif 'duration_s' in dict.keys():
-        res = time.gmtime(float(dict['duration_s']))
+            wodict['pace'] = '0'
+            wodict['speed'] = '0'
+    if 'speed_avg_kmh' in wodict.keys():
+        speed = float(wodict['speed_avg_kmh'])
+        if speed != 0 :
+            pace_sec = 60*60 / speed
+            res = time.gmtime(pace_sec)
+            wodict['pace'] = time.strftime('%M:%S', res)
+            wodict['speed'] = str(round(speed, 2))
+        else:
+            wodict['pace'] = '0'
+            wodict['speed'] = '0'
+    #    return normalized
+    if 'speed_max' in wodict.keys():
+        speed = float(wodict['speed_max'])
+        wodict['speed_max'] = str(round(speed, 2))
+    if 'speed_max_kmh' in wodict.keys():
+        speed = float(wodict['speed_max_kmh'])
+        wodict['speed_max'] = str(round(speed, 2))
+    #    return normalized
+    if 'duration' in wodict.keys():
+        res = time.gmtime(float(wodict['duration']))
         dur = time.strftime('%H:%M:%S', res)
-        normalized['duration'] = dur
-        return normalized
-    elif 'sport' in dict.keys():
-        normalized['sport'] = dict['sport'].capitalize().replace('_', ' ')
-        return normalized
-    elif 'distance_km' in dict.keys():
-        normalized['distance'] = str(round(float(dict['distance_km']),2))
-        return normalized
-    elif 'start_time' in dict.keys():
-        tt = _to_python_time(dict['start_time'])
-        normalized['date'] = tt.date()
-        normalized['time'] = tt.time()
-        normalized['start_time'] = dict['start_time']
-        return normalized
-    elif 'message' in dict.keys():
-        normalized['message'] = emoji.get_emoji_regexp().sub(r'', dict['message'])
-        return normalized
-    return dict
+        wodict['duration'] = dur
+    if 'duration_s' in wodict.keys():
+        res = time.gmtime(float(wodict['duration_s']))
+        dur = time.strftime('%H:%M:%S', res)
+        wodict['duration'] = dur
+    #    return normalized
+    if 'sport' in wodict.keys():
+        sp = wodict['sport']
+        if isinstance(sp, int):
+            wodict['sport'] = SPORTS[sp]
+        else:
+            wodict['sport'] = sp.capitalize().replace('_', ' ')
+    #    return normalized
+    if 'distance' in wodict.keys():
+        wodict['distance'] = str(round(float(wodict['distance']),2))
+    if 'distance_km' in wodict.keys():
+        wodict['distance'] = str(round(float(wodict['distance_km']),2))
+    #    return normalized
+    if 'start_time' in wodict.keys():
+        tt = _to_python_time(wodict['start_time'])
+        wodict['date'] = tt.date()
+        wodict['time'] = tt.time()
+        wodict['start_time'] = wodict['start_time']
+    #    return normalized
+    if 'message' in wodict.keys():
+        wodict['message'] = emoji.get_emoji_regexp().sub(r'', wodict['message'])
+    if 'ascent' in wodict.keys():
+        wodict['ascend_m'] = wodict['ascent']
+    if 'descent' in wodict.keys():
+        wodict['descend_m'] = wodict['descent']
+    if 'heart_rate_avg' in wodict.keys():
+        wodict['heart_rate_avg_bpm'] = wodict['heart_rate_avg']
+    if 'heart_rate_max' in wodict.keys():
+        wodict['heart_rate_max_bpm'] = wodict['heart_rate_max']
+    if 'cadence_avg' in wodict.keys():
+        wodict['cadence_avg_rpm'] = wodict['cadence_avg']
+    if 'cadence_max' in wodict.keys():
+        wodict['cadence_max_rpm'] = wodict['cadence_max']
+    if 'altitude_min' in wodict.keys():
+        wodict['altitude_min_m'] = wodict['altitude_min']
+    if 'altitude_max' in wodict.keys():
+        wodict['altitude_max_m'] = wodict['altitude_max']
+    if 'calories' in wodict.keys():
+        wodict['calories_kcal'] = wodict['calories']
+    #    return normalized
 
 def loadfull(path):
     """Load data from Endomondo backup
@@ -101,11 +199,17 @@ def loadfull(path):
         with open(f, encoding='utf-8') as p:
             w = json.load(p)
             workout_dict = {}
-            for dict in w:
-                #skip GPS track part for workout
-                if 'points' in dict.keys():
-                    continue
-                workout_dict.update(normalizefield(dict))
+            if isinstance(w, list):
+                for dict in w:
+                    #skip GPS track part for workout
+                    if 'points' in dict.keys():
+                        continue
+                    normalizefield(dict)
+                    workout_dict.update(dict)
+            else:
+                #we suppose it's dict (and we're dealing with backup from endobackup.py)
+                normalizefield(w)
+                workout_dict.update(w)
             workout_dict.update({'json_file': f}) #add path of processed file for future references
             dd.append(workout_dict)
         if not sg.OneLineProgressMeter('Loading Endo Backup', i, total-1,  'kkk', path):
@@ -158,7 +262,7 @@ def main():
                         [FieldColumn("Sport: ", '-SPORT-'), FieldColumn("Date: ",'-DATE-'),
                         FieldColumn("Time: ", '-STARTTIME-'), FieldColumn("Duration: ", '-DURATION-'),
                         FieldColumn("Distance: ", '-DISTANCE-')],
-                        [FieldColumn("Pace: ", '-PACE-'), FieldColumn("Ascend: ", '-ASC-'), 
+                        [FieldColumn("Pace: ", '-PACE-'), FieldColumn("Ascent: ", '-ASC-'), 
                         FieldColumn("Descent: ", '-DESC-')],
                         [sg.Frame('Note', [[sg.Text(key='-NOTE-', size=(180,6))]])]
                     ]
@@ -208,15 +312,20 @@ def main():
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
         elif event == '-FETCH-':
-            #request email and password
-            email = sg.PopupGetText("Endo Email:")
-            password = sg.PopupGetText("Endo Password:", password_char='*')
-            if folder_path:
-                fldr = folder_path + '/'
+            #test if endoworkouts.json file is present
+            if os.path.isfile(folder_path+'/endoworkouts.json'):
+                with open(folder_path+'/endoworkouts.json') as p:
+                    comm = json.load(p)
             else:
-                fldr = ''
-            #print(fldr)
-            comm = fetchcomments(email, password, max_workouts, fldr)
+                #request email and password
+                email = sg.PopupGetText("Endo Email:")
+                password = sg.PopupGetText("Endo Password:", password_char='*')
+                if folder_path:
+                    fldr = folder_path + '/'
+                else:
+                    fldr = ''
+                #print(fldr)
+                comm = fetchcomments(email, password, max_workouts, fldr)
             if comm is not None:
                 updatecomments(dd, comm, indx)
             with open("cache.pkl", "wb") as write_file:
@@ -250,16 +359,19 @@ def main():
                 pickle.dump(indx, write_file, pickle.HIGHEST_PROTOCOL)
             updatetable(data, dd, window)
         elif event == '-DATA-':
-            workout = dd[values['-DATA-'][0]]
-            window['-SPORT-'].update(workout.get('sport'))
-            window['-DATE-'].update(workout.get('date'))
-            window['-STARTTIME-'].update(workout.get('time'))
-            window['-DURATION-'].update(workout.get('duration'))
-            window['-DISTANCE-'].update(workout.get('distance'))
-            window['-PACE-'].update(workout.get('pace'))
-            window['-ASC-'].update(workout.get('ascend_m'))
-            window['-DESC-'].update(workout.get('descend_m'))
-            window['-NOTE-'].update(workout.get('message'))
+            try:
+                workout = dd[values['-DATA-'][0]]
+                window['-SPORT-'].update(workout.get('sport'))
+                window['-DATE-'].update(workout.get('date'))
+                window['-STARTTIME-'].update(workout.get('time'))
+                window['-DURATION-'].update(workout.get('duration'))
+                window['-DISTANCE-'].update(workout.get('distance'))
+                window['-PACE-'].update(workout.get('pace'))
+                window['-ASC-'].update(workout.get('ascend_m'))
+                window['-DESC-'].update(workout.get('descend_m'))
+                window['-NOTE-'].update(workout.get('message'))
+            except IndexError:
+                pass
         elif event == '-DATA-+DBL+' or event == '-DATA-+ENTER+':
             #in case of double click or ENTER press on specific line - pop up detailed window
             workout = dd[values['-DATA-'][0]] # selected workout
@@ -279,7 +391,7 @@ def main():
                             ],
                             [
                                 FieldColumn("Pace: ", '-PACE-', workout.get('pace')),
-                                FieldColumn("Ascend: ", '-ASC-', workout.get('ascend_m')),
+                                FieldColumn("Ascent: ", '-ASC-', workout.get('ascend_m')),
                                 FieldColumn("Descent: ", '-DESC-', workout.get('descend_m')),
                                 FieldColumn("Alt min: ", '-ALTMIN-', workout.get('altitude_min_m')),
                                 FieldColumn("Alt max: ", '-ALTMAX-', workout.get('altitude_max_m'))
@@ -314,15 +426,20 @@ def main():
                 imgline = []
                 for i in range(0, len(pict)):
                 #  try:
+                    try:
                         url = pict[i][1].get('picture')[0][0].get('url')
                         data, (imgwidth, imgheight) = get_img_data(folder_path+'/'+url, first=True)
-                        if linewidth + imgwidth > win2_width:
-                            windetails += [imgline]
-                            win2_height += imgheight+50
-                            imgline = []
-                            linewidth = 0
-                        imgline.append(sg.Image(key='-IMAGE'+str(i)+'-', data=data))
-                        linewidth += imgwidth
+                    except KeyError:
+                        url = pict[i].get('picture_file')
+                        data, (imgwidth, imgheight) = get_img_data(os.path.join(folder_path, 'Images', 
+                                    os.path.split(url)[1]), first=True)
+                    if linewidth + imgwidth > win2_width:
+                        windetails += [imgline]
+                        win2_height += imgheight+50
+                        imgline = []
+                        linewidth = 0
+                    imgline.append(sg.Image(key='-IMAGE'+str(i)+'-', data=data))
+                    linewidth += imgwidth
                 if imgline !=[]:
                     windetails += [imgline]
                     win2_height += imgheight+50
@@ -333,18 +450,17 @@ def main():
             #create comments section
             comm_num = workout.get('num_comments')
             if comm_num !='':
-                try:
-                    for i in range(comm_num): #TODO: make range depending on real length of list
-                        #frame_layout = pprint.pformat(emoji.get_emoji_regexp().sub(r'', workout.get('ecomments').get('data')[i]))
+                for i in range(comm_num): #TODO: make range depending on real length of list
+                    #frame_layout = pprint.pformat(emoji.get_emoji_regexp().sub(r'', workout.get('ecomments').get('data')[i]))
+                    try:
                         comment = workout.get('ecomments').get('data')[i]
-                        comh = int(len(comment['text'])/100)+1 #height of the comment cell to fit the comment
-                        frame_layout = [[sg.Text(emoji.get_emoji_regexp().sub(r'',comment['from']['name'])+':', size=(20, comh)), 
-                                        sg.Text(emoji.get_emoji_regexp().sub(r'',comment['text']), size=(100, comh), pad=(0,0))]]
-                        windetails += frame_layout
-                        win2_height += 28 #TODO: add height depending on comment height
-                except Exception as err:
-                    print('Exception:', err)
-                    #windetails += [[sg.Multiline(emoji.get_emoji_regexp().sub(r'', pprint.pformat(workout)), size=(150, 10))]]
+                    except AttributeError:
+                        comment = workout.get('comments').get('data')[i]
+                    comh = int(len(comment['text'])/100)+1 #height of the comment cell to fit the comment
+                    frame_layout = [[sg.Text(emoji.get_emoji_regexp().sub(r'',comment['from']['name'])+':', size=(20, comh)), 
+                                    sg.Text(emoji.get_emoji_regexp().sub(r'',comment['text']), size=(100, comh), pad=(0,0))]]
+                    windetails += frame_layout
+                    win2_height += 28 #TODO: add height depending on comment height
 
             win2_height = WIN2_HEIGHT_MAX if win2_height > WIN2_HEIGHT_MAX else win2_height
 
