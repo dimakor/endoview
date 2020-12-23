@@ -378,9 +378,8 @@ def main():
             break
     
     bar.finish()
-    print("Folder:", backupfolder)
-    with open(os.path.join(backupfolder,'endoworkouts.json'), 'w') as json_file:
-        json.dump(results, json_file)
+    # with open(os.path.join(backupfolder,'endoworkouts.json'), 'w') as json_file:
+    #     json.dump(results, json_file)
     print("Workout processed: ", nm)
     # feed_id = results['data'][0]['feed_id']
     # print('FEED ID:'+str(feed_id))
