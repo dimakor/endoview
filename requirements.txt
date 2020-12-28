@@ -3,3 +3,5 @@ Pillow
 PySimpleGUI
 pytz
 requests
+lxml
+progressbar2

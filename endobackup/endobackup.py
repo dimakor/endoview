@@ -199,9 +199,6 @@ def main():
     params['email'] = email
     params['password'] = password
 
-    
-    #directories for backup
-
     request = requests.session()
     request.headers['User-Agent'] = user_agent
     r = request.get('https://api.mobile.endomondo.com/mobile/auth', params=params)
@@ -219,10 +216,7 @@ def main():
         if key == "authToken":
             token = value
             break
-#    print ("Token: "+token)
-    # TODO: if token is None
-    #     print("No auth token")
-    #     break
+
     #generate backup folder paths
     workingfolder ='.' #for future use
     backupfolder = os.path.join(workingfolder, backup_name(email)) #backup root
@@ -244,10 +238,11 @@ def main():
         'fields': 'device,simple,basic,interval,lcp_count,feed_id,pictures,points'}
     workout_params.update({'authToken': token,
                        'language': 'EN'})
-
+    
     i = 0
     nm = 0
     avatars = set()
+
     while True:
         i+=1
         if after is not None:
@@ -282,7 +277,7 @@ def main():
                     #print('FEED ID: ', feedid, " Comm: ", num_comments)
                     workout_params = {'feedId': str(feedid)}
                     workout_params.update({'authToken': token,
-                            'language': 'EN'})
+                            'language': 'EN', 'maxResults': '200'})
                     rr = request.get('https://api.mobile.endomondo.com/mobile/api/feed/comments/get', params=workout_params)
                     if rr.status_code != 200:
                         print ('Error!' + str(rr.status_code))
@@ -302,7 +297,7 @@ def main():
                     track = ch.pop('points') #Also removes points from ch
                     ch['track_file'] = trackfname_json #save location of track file in workout
                     with open(trackfname_json, 'w') as f:
-                        json.dump(track, f)
+                        json.dump(track, f, indent=4)
                 except KeyError as err:
                     pass
                 act_txt = []
@@ -362,7 +357,7 @@ def main():
                 
                 #save workout to file
                 with open(workoutfname, 'w') as f:
-                    json.dump(ch, f)
+                    json.dump(ch, f, indent=4)
                 bar.update(nm)            
             except KeyError:
                 print(KeyError)
