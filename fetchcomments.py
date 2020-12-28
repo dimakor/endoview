@@ -101,7 +101,7 @@ def fetchcomments(email, password, max_workouts, fullpath=''):
                     #print('FEED ID: ', feedid, " Comm: ", num_comments)
                     workout_params = {'feedId': str(feedid)}
                     workout_params.update({'authToken': token,
-                            'language': 'EN'})
+                            'language': 'EN', 'maxResults': '200'})
                     rr = request.get('http://api.mobile.endomondo.com/mobile/api/feed/comments/get', params=workout_params)
                     if r.status_code != 200:
                         print ('Error!' + str(r.status_code))
