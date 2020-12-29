@@ -410,8 +410,8 @@ def main():
                 window['-ASC-'].update(workout.get('ascend_m'))
                 window['-DESC-'].update(workout.get('descend_m'))
                 window['-NOTE-'].update(workout.get('message'))
-            except IndexError:
-                pass
+            except (IndexError, KeyError) as err:
+                print(err)
         elif event == '-DATA-+DBL+' or event == '-DATA-+ENTER+':
             try:
                 #in case of double click or ENTER press on specific line - pop up detailed window
@@ -520,10 +520,10 @@ def main():
                 del win2layout
                 del win2
                 del windetails
-            except IndexError as err:
+            except (IndexError, KeyError) as err:
                 print(err)
                 pass
-    
+
     window.close()
 
 if __name__ == "__main__":
