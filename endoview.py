@@ -165,7 +165,10 @@ def normalizefield(wodict):
     if 'sport' in wodict.keys():
         sp = wodict['sport']
         if isinstance(sp, int):
-            wodict['sport'] = SPORTS[sp]
+            try:
+                wodict['sport'] = SPORTS[sp]
+            except KeyError:
+                wodict['sport'] = SPORTS[22] #Unknown sport - 'Other'
         else:
             wodict['sport'] = sp.capitalize().replace('_', ' ')
     #    return normalized

@@ -20,7 +20,7 @@ model = "M"
 user_agent = "Dalvik/1.4.0 (Linux; U; %s %s; %s Build/GRI54)" % (operatingsys, os_version, model)
 device_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, socket.gethostname()))
 
-max_results = 50
+max_results = 20
 
 params = {
     #'email': email,
@@ -28,7 +28,7 @@ params = {
     'country':     'US',
     'deviceId':    device_id,
     'os':          operatingsys,
-    'appVersion':  "7.1",
+    'appVersion':  "8.0",
     'appVariant':  "M-Pro",
     'osVersion':   os_version,
     'model':       model,
@@ -235,7 +235,7 @@ def main():
     results = [] # type: ignore
 
     workout_params = {'maxResults': max_results,
-        'fields': 'device,simple,basic,interval,lcp_count,feed_id,pictures,points'}
+        'fields': 'device,simple,basic,interval,lcp_count,feed_id,pictures'}
     workout_params.update({'authToken': token,
                        'language': 'EN'})
     
@@ -256,12 +256,22 @@ def main():
             print ('Error!', r.status_code)
 
         chunk = r.json()['data']
-        for ch in chunk:
+        for chch in chunk:
             nm += 1
             feedid = 0
             num_comments = 0
             comments = None
-            
+
+            workout_params = {'workoutId': chch['id'],
+            'fields': 'device,simple,basic,interval,lcp_count,feed_id,pictures'}
+            workout_params.update({'authToken': token,
+                       'language': 'EN'})
+            r = request.get('http://api.mobile.endomondo.com/mobile/api/workout/get', 
+                        params=workout_params)
+            if r.status_code != 200:
+                print ('Error!' + r.status_code)
+
+            ch = r.json()
             #check if there are comments
             t1 = ch.get('lcp_count')
             t2 = ch.get('comments')
