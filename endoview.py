@@ -13,8 +13,6 @@ import configparser
 from PIL import Image, ImageTk
 import PySimpleGUI as sg
 
-from fetchcomments import *
-
 #interface declarations
 sg.theme("SystemDefault")
 
@@ -311,7 +309,7 @@ def main():
     #Main window layout
     layout = [
         [sg.FolderBrowse(target='-FOLDER-'), sg.Input(key='-FOLDER-', enable_events=True), 
-        sg.Submit(), sg.Button('Fetch Comments', key='-FETCH-'), sg.Exit()],
+        sg.Submit(), sg.Exit()],
         [sg.Table(data, headings=tabl_head, justification='center', select_mode='browse',
             key='-DATA-', num_rows=30, enable_events=True, bind_return_key=True, max_col_width=100)],
         [sg.Column(details_frame, expand_y=True, expand_x=True)]
@@ -351,26 +349,6 @@ def main():
         #print(event, values)
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
-        elif event == '-FETCH-':
-            #test if endoworkouts.json file is present
-            if os.path.isfile(folder_path+'/endoworkouts.json'):
-                with open(folder_path+'/endoworkouts.json') as p:
-                    comm = json.load(p)
-            else:
-                #request email and password
-                email = sg.PopupGetText("Endo Email:")
-                password = sg.PopupGetText("Endo Password:", password_char='*')
-                if folder_path:
-                    fldr = folder_path + '/'
-                else:
-                    fldr = ''
-                #print(fldr)
-                comm = fetchcomments(email, password, max_workouts, fldr)
-            if comm is not None:
-                updatecomments(dd, comm, indx)
-            with open("cache.pkl", "wb") as write_file:
-                pickle.dump(dd, write_file, pickle.HIGHEST_PROTOCOL)
-            updatetable(data, dd, window)
         elif event == '-FOLDER-' or (event == 'Submit' and len(values['-FOLDER-'])>0):
             folder_path = values['-FOLDER-']
             #test if endoworkouts.json file is present
