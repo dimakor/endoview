@@ -3,7 +3,6 @@ import json
 import os.path
 import io
 import time
-import tkinter
 import pytz
 import datetime
 import emoji
