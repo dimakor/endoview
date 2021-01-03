@@ -12,8 +12,6 @@ import configparser
 from PIL import Image, ImageTk
 import PySimpleGUI as sg
 
-from fetchcomments import *
-
 #interface declarations
 sg.theme("SystemDefault")
 
@@ -340,10 +338,7 @@ def main():
         pass
 
     while True:  # Event Loop of main window
-        try: event, values = window.read(timeout=100) #trap for strange exception
-        except _tkinter.TclError as err:
-            #print(err)
-            pass
+        event, values = window.read(timeout=100) #trap for strange exception
 
         if event == sg.TIMEOUT_KEY:
             continue
@@ -355,16 +350,6 @@ def main():
             if os.path.isfile(folder_path+'/endoworkouts.json'):
                 with open(folder_path+'/endoworkouts.json') as p:
                     comm = json.load(p)
-            else:
-                #request email and password
-                email = sg.PopupGetText("Endo Email:")
-                password = sg.PopupGetText("Endo Password:", password_char='*')
-                if folder_path:
-                    fldr = folder_path + '/'
-                else:
-                    fldr = ''
-                #print(fldr)
-                comm = fetchcomments(email, password, max_workouts, fldr)
             if comm is not None:
                 updatecomments(dd, comm, indx)
             with open("cache.pkl", "wb") as write_file:
