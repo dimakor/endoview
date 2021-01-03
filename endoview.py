@@ -452,7 +452,11 @@ def main():
                 msg = workout.get('message')
                 lennote = 0 if msg is None else len(msg) #find out length of text note
                 if lennote>0: # if there is note in workout - add text field and fill it with note
-                    nlines = msg.count('\n')+1
+                    #nlines = msg.count('\n')+1
+                    lines = msg.split("\n")
+                    nlines = 0
+                    for oneline in lines:
+                        nlines += int(len(oneline)/165) + 1 # text breaks at about 165 chars in average
                     nheight = int(lennote/150)+1
                     if nlines < nheight:
                         nlines = nheight
@@ -497,7 +501,12 @@ def main():
                     
                     for i in range(len(comment)):
                         comtext = comment[i]['text']
-                        comh = int(len(comtext)/100)+1 #height of the comment cell to fit the comment
+                        lines = comtext.split("\n")
+                        nlines = 0
+                        for oneline in lines:
+                            nlines += int(len(oneline)/100) + 1 # text breaks at about 165 chars in average
+                        #comh = int(len(comtext)/100)+1 #height of the comment cell to fit the comment
+                        comh = nlines
                         frame_layout = [[sg.Text(emoji.get_emoji_regexp().sub(r'',comment[i]['from']['name'])+':', size=(20, comh)), 
                                         sg.Text(emoji.get_emoji_regexp().sub(r'',comtext), size=(100, comh), pad=(0,0))]]
                         windetails += frame_layout
